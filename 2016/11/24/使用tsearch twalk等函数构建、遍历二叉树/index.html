@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+    <meta charset="utf-8">
+    
+    <title>使用tsearch twalk等函数构建、遍历二叉树 | Zay&#39;s Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="参考：http://man7.org/linux/man-pages/man3/tsearch.3.html 使用tsearch等接口构建二叉树，其接口比较简洁，相关的函数声明如下：12345678#include &amp;lt;search.h&amp;gt;void *tsearch(const void *key, void **rootp, int (*compar)(const void *, con">
+<meta name="keywords" content="algorithm">
+<meta property="og:type" content="article">
+<meta property="og:title" content="使用tsearch twalk等函数构建、遍历二叉树">
+<meta property="og:url" content="http://zay.pub/2016/11/24/使用tsearch twalk等函数构建、遍历二叉树/index.html">
+<meta property="og:site_name" content="Zay&#39;s Blog">
+<meta property="og:description" content="参考：http://man7.org/linux/man-pages/man3/tsearch.3.html 使用tsearch等接口构建二叉树，其接口比较简洁，相关的函数声明如下：12345678#include &amp;lt;search.h&amp;gt;void *tsearch(const void *key, void **rootp, int (*compar)(const void *, con">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2018-02-28T09:57:37.309Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="使用tsearch twalk等函数构建、遍历二叉树">
+<meta name="twitter:description" content="参考：http://man7.org/linux/man-pages/man3/tsearch.3.html 使用tsearch等接口构建二叉树，其接口比较简洁，相关的函数声明如下：12345678#include &amp;lt;search.h&amp;gt;void *tsearch(const void *key, void **rootp, int (*compar)(const void *, con">
+    
+
+    
+
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="container">
+        <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">Zay&#39;s Blog</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/.">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+            </nav>
+            
+                
+                <nav id="sub-nav">
+                    <div class="profile" id="profile-nav">
+                        <a id="profile-anchor" href="javascript:;">
+                            <img class="avatar" src="/images/avatar.jpg" />
+                            <i class="fa fa-caret-down"></i>
+                        </a>
+                    </div>
+                </nav>
+            
+            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: 'Posts',
+            PAGES: 'Pages',
+            CATEGORIES: 'Categories',
+            TAGS: 'Tags',
+            UNTITLED: '(Untitled)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/.">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+        <div class="outer">
+            
+                
+
+<aside id="profile">
+    <div class="inner profile-inner">
+        <div class="base-info profile-block">
+            <img id="avatar" src="/images/avatar.jpg" />
+            <h2 id="name">Zay Xu</h2>
+            <h3 id="title">Linux Developer</h3>
+            <span id="location"><i class="fa fa-map-marker"></i>Beijing, China</span>
+            <a id="follow" target="_blank" href="https://www.linkedin.com/in/guangzhi-xu-3727465a/">FOLLOW</a>
+        </div>
+        <div class="article-info profile-block">
+            <div class="article-info-block">
+                11
+                <span>posts</span>
+            </div>
+            <div class="article-info-block">
+                5
+                <span>tags</span>
+            </div>
+        </div>
+        
+    </div>
+</aside>
+
+            
+            <section id="main"><article id="post-使用tsearch twalk等函数构建、遍历二叉树" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+            使用tsearch twalk等函数构建、遍历二叉树
+        </h1>
+    
+
+                
+                    <div class="article-meta">
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2016/11/24/使用tsearch twalk等函数构建、遍历二叉树/">
+            <time datetime="2016-11-23T16:00:00.000Z" itemprop="datePublished">2016-11-24</time>
+        </a>
+    </div>
+
+
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Linux/">Linux</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/algorithm/">algorithm</a>
+    </div>
+
+                    </div>
+                
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+            
+            <p>参考：<a href="http://man7.org/linux/man-pages/man3/tsearch.3.html" target="_blank" rel="noopener">http://man7.org/linux/man-pages/man3/tsearch.3.html</a></p>
+<p>使用tsearch等接口构建二叉树，其接口比较简洁，相关的函数声明如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;search.h&gt;</span><br><span class="line">void *tsearch(const void *key, void **rootp, int (*compar)(const void *, const void *));</span><br><span class="line">void *tfind(const void *key, void *const *rootp, int (*compar)(const void *, const void *));</span><br><span class="line">void *tdelete(const void *key, void **rootp, int (*compar)(const void *, const void *));</span><br><span class="line">void twalk(const void *root, void (*action)(const void *nodep, const VISIT which, const int depth));</span><br><span class="line">#define _GNU_SOURCE         /* See feature_test_macros(7) */</span><br><span class="line">#include &lt;search.h&gt;</span><br><span class="line">void tdestroy(void *root, void (*free_node)(void *nodep));</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li><p>tsearch: 查询键值key是否存在，如果不存在则将key插入二叉树<br>key: 指向键值key的指针<br>rootp：指向根节点指针的指针，若当前插入key为根节点，需要设置rootp指向的根节点指针为NULL<br>compar：比较函数, 若返回负值，表示第一个参数小于第二个参数；若返回正值，表示第一个参数大于第二个参数；若返回零，表示两个参数相等<br>返回值：指向键值key指针的指针</p>
+</li>
+<li><p>tfind：查询指定键值key是否存在<br>参数：与tsearch相同<br>返回值：若键值存在则返回键值key指针的指针，若不存在返回NULL</p>
+</li>
+<li><p>tdelete：从二叉树中删除给定键值<br>参数：与tsearch相同<br>返回值：若键值存在则返回父节点键值key指针的指针，若不存在返回NULL</p>
+</li>
+<li><p>twalk：遍历二叉树<br>root：根节点指针<br>action： 遍历函数，其参数解析如下</p>
+</li>
+<li><p>action： 二叉树遍历函数<br>nodep：键值key指针的指针<br>which：表示本次访问节点的类型，共有四种 preorder 前序，postorder 中序，endorder 后序，leaf 叶子节点。每个叶子节点只访问一次，中间节点会访问三次<br>depth：该节点在二叉树中的深度，根节点为0 ，以此类推</p>
+</li>
+</ul>
+<p>在action函数中对节点类型进行过滤，就可以得到前序遍历、中序遍历、后序遍历甚至混合使用的结果</p>
+<ul>
+<li>tdestroy：释放二叉树占用的空间<br>root： 根节点指针<br>free_node：二叉树中每个键值key的释放函数</li>
+</ul>
+<p>一个简单的代码示例：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;stdio.h&gt;</span><br><span class="line">#include &lt;stddef.h&gt;</span><br><span class="line">#include &lt;assert.h&gt;</span><br><span class="line">#define _GNU_SOURCE</span><br><span class="line">#include &lt;search.h&gt;</span><br><span class="line">typedef struct MyItem &#123;</span><br><span class="line">    int key;        /* key as the first member field */</span><br><span class="line">    int value;</span><br><span class="line">&#125; MyItem;</span><br><span class="line">int my_compare(const void *keyA, const void *keyB)</span><br><span class="line">&#123;</span><br><span class="line">    return *(int *)keyA - *(int *)keyB;</span><br><span class="line">&#125;</span><br><span class="line">void my_action(const void *nodep, VISIT value, int level)</span><br><span class="line">&#123;</span><br><span class="line">    const MyItem *item = *(const MyItem **)nodep;</span><br><span class="line">    switch (value) &#123;</span><br><span class="line">        case preorder:</span><br><span class="line">        case leaf:</span><br><span class="line">            printf(&quot;1. traversal, key=%d, value=%d, level=%d\n&quot;,</span><br><span class="line">                   item-&gt;key, item-&gt;value, level);</span><br><span class="line">            break;</span><br><span class="line">        case endorder:</span><br><span class="line">        case postorder:</span><br><span class="line">            break;</span><br><span class="line">    &#125;   </span><br><span class="line">&#125;</span><br><span class="line">void my_free(void *nodep)</span><br><span class="line">&#123;</span><br><span class="line">&#125;</span><br><span class="line">int main(int argc, char **artv)</span><br><span class="line">&#123;</span><br><span class="line">    void *root = NULL;</span><br><span class="line">    MyItem items[16];</span><br><span class="line">    int i;</span><br><span class="line">    MyItem **item = NULL;</span><br><span class="line">    for (i = 0; i &lt; 16; i++) &#123;</span><br><span class="line">        items[i].key = i;</span><br><span class="line">        items[i].value = i + 100;</span><br><span class="line">        tsearch(&amp;items[i].key, &amp;root, my_compare);</span><br><span class="line">    &#125;</span><br><span class="line">    /* 1. tree traversal (preorder) */</span><br><span class="line">    twalk(root, my_action);</span><br><span class="line">    /* 2. find item in the tree */</span><br><span class="line">    i = 5;</span><br><span class="line">    item = (MyItem **)tfind(&amp;i, &amp;root, my_compare);</span><br><span class="line">    assert(item != NULL);</span><br><span class="line">    printf(&quot;2. find key=%d, value=%d\n&quot;, (*item)-&gt;key, (*item)-&gt;value);</span><br><span class="line">    /* 3. remove a item */</span><br><span class="line">    i = 5;</span><br><span class="line">    tdelete(&amp;i, &amp;root, my_compare);</span><br><span class="line">    item = (MyItem **)tfind(&amp;i, &amp;root, my_compare);</span><br><span class="line">    assert(item == NULL);</span><br><span class="line">    printf(&quot;3. remove item with key=%d\n&quot;, i);</span><br><span class="line">    /* 4. destroy tree */</span><br><span class="line">    tdestroy(root, my_free);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+
+        
+        </div>
+        <footer class="article-footer">
+            <div class="share-container">
+
+
+
+</div>
+
+    <a data-url="http://zay.pub/2016/11/24/使用tsearch twalk等函数构建、遍历二叉树/" data-id="cjefbaf8g000eygus94u45enl" class="article-share-link"><i class="fa fa-share"></i>Share</a>
+<script>
+    (function ($) {
+        // Prevent duplicate binding
+        if (typeof(__SHARE_BUTTON_BINDED__) === 'undefined' || !__SHARE_BUTTON_BINDED__) {
+            __SHARE_BUTTON_BINDED__ = true;
+        } else {
+            return;
+        }
+        $('body').on('click', function() {
+            $('.article-share-box.on').removeClass('on');
+        }).on('click', '.article-share-link', function(e) {
+            e.stopPropagation();
+
+            var $this = $(this),
+                url = $this.attr('data-url'),
+                encodedUrl = encodeURIComponent(url),
+                id = 'article-share-box-' + $this.attr('data-id'),
+                offset = $this.offset(),
+                box;
+
+            if ($('#' + id).length) {
+                box = $('#' + id);
+
+                if (box.hasClass('on')){
+                    box.removeClass('on');
+                    return;
+                }
+            } else {
+                var html = [
+                    '<div id="' + id + '" class="article-share-box">',
+                        '<input class="article-share-input" value="' + url + '">',
+                        '<div class="article-share-links">',
+                            '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="fa fa-twitter article-share-twitter" target="_blank" title="Twitter"></a>',
+                            '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="fa fa-facebook article-share-facebook" target="_blank" title="Facebook"></a>',
+                            '<a href="http://pinterest.com/pin/create/button/?url=' + encodedUrl + '" class="fa fa-pinterest article-share-pinterest" target="_blank" title="Pinterest"></a>',
+                            '<a href="https://plus.google.com/share?url=' + encodedUrl + '" class="fa fa-google article-share-google" target="_blank" title="Google+"></a>',
+                        '</div>',
+                    '</div>'
+                ].join('');
+
+              box = $(html);
+
+              $('body').append(box);
+            }
+
+            $('.article-share-box.on').hide();
+
+            box.css({
+                top: offset.top + 25,
+                left: offset.left
+            }).addClass('on');
+
+        }).on('click', '.article-share-box', function (e) {
+            e.stopPropagation();
+        }).on('click', '.article-share-box-input', function () {
+            $(this).select();
+        }).on('click', '.article-share-box-link', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            window.open(this.href, 'article-share-box-window-' + Date.now(), 'width=500,height=450');
+        });
+    })(jQuery);
+</script>
+
+            
+    
+        <a href="http://zay.pub/2016/11/24/使用tsearch twalk等函数构建、遍历二叉树/#comments" class="article-comment-link disqus-comment-count" data-disqus-url="http://zay.pub/2016/11/24/使用tsearch twalk等函数构建、遍历二叉树/">Comments</a>
+    
+
+        </footer>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2016/11/25/如何查看KVM虚拟机VM_EXIT统计信息/" id="article-nav-newer" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Newer</strong>
+            <div class="article-nav-title">
+                
+                    如何查看KVM虚拟机VM_EXIT统计信息
+                
+            </div>
+        </a>
+    
+    
+        <a href="/2016/11/16/Linux 文件访问、修改时间的区别/" id="article-nav-older" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Older</strong>
+            <div class="article-nav-title">Linux 文件访问、修改时间的区别</div>
+        </a>
+    
+</nav>
+
+
+    
+</article>
+
+
+    
+    
+        <section id="comments">
+    <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+</section>
+    
+
+</section>
+            
+                
+<aside id="sidebar">
+   
+        
+    <div class="widget-wrap">
+        <h3 class="widget-title">recent</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/03/06/cgroup内存子系统配置说明/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Linux/">Linux</a></p>
+                            <p class="item-title"><a href="/2018/03/06/cgroup内存子系统配置说明/" class="title">cgroup内存子系统配置说明</a></p>
+                            <p class="item-date"><time datetime="2018-03-05T23:05:04.496Z" itemprop="datePublished">2018-03-06</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2017/10/26/Page Table Entry (PTE) 详解/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Linux/">Linux</a></p>
+                            <p class="item-title"><a href="/2017/10/26/Page Table Entry (PTE) 详解/" class="title">Page Table Entry (PTE) 详解</a></p>
+                            <p class="item-date"><time datetime="2017-10-25T16:00:00.000Z" itemprop="datePublished">2017-10-26</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2017/09/12/x86 平台 Paging Mode/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Linux/">Linux</a></p>
+                            <p class="item-title"><a href="/2017/09/12/x86 平台 Paging Mode/" class="title">x86 平台 Paging Mode</a></p>
+                            <p class="item-date"><time datetime="2017-09-11T16:00:00.000Z" itemprop="datePublished">2017-09-12</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2017/03/17/Message Signaled Interrupts（MSI）/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Linux/">Linux</a></p>
+                            <p class="item-title"><a href="/2017/03/17/Message Signaled Interrupts（MSI）/" class="title">Message Signaled Interrupts（MSI）</a></p>
+                            <p class="item-date"><time datetime="2017-03-16T16:00:00.000Z" itemprop="datePublished">2017-03-17</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2017/03/16/高级可编程中断控制器（APIC）/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <p class="item-category"><a class="article-category-link" href="/categories/Linux/">Linux</a></p>
+                            <p class="item-title"><a href="/2017/03/16/高级可编程中断控制器（APIC）/" class="title">高级可编程中断控制器（APIC）</a></p>
+                            <p class="item-date"><time datetime="2017-03-15T16:00:00.000Z" itemprop="datePublished">2017-03-16</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+    
+        
+    <div class="widget-wrap">
+        <h3 class="widget-title">categories</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Linux/">Linux</a><span class="category-list-count">11</span></li></ul>
+        </div>
+    </div>
+
+    
+        
+    <div class="widget-wrap">
+        <h3 class="widget-title">archives</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/01/">January 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/11/">November 2016</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+    
+        
+    <div class="widget-wrap">
+        <h3 class="widget-title">tags</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/algorithm/">algorithm</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/container/">container</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/network/">network</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/operation/">operation</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/virtualization/">virtualization</a><span class="tag-list-count">6</span></li></ul>
+        </div>
+    </div>
+
+    
+        
+    <div class="widget-wrap">
+        <h3 class="widget-title">tag cloud</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/algorithm/" style="font-size: 10px;">algorithm</a> <a href="/tags/container/" style="font-size: 10px;">container</a> <a href="/tags/network/" style="font-size: 10px;">network</a> <a href="/tags/operation/" style="font-size: 15px;">operation</a> <a href="/tags/virtualization/" style="font-size: 20px;">virtualization</a>
+        </div>
+    </div>
+
+    
+        
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">links</h3>
+        <div class="widget">
+            <ul>
+                
+            </ul>
+        </div>
+    </div>
+
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+
+            
+        </div>
+        <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            &copy; 2018 Zay Xu<br>
+            Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. Theme by <a href="http://github.com/ppoffice">PPOffice</a>
+        </div>
+    </div>
+</footer>
+        
+    
+    <script>
+    var disqus_config = function () {
+        
+            this.page.url = 'http://zay.pub/2016/11/24/使用tsearch twalk等函数构建、遍历二叉树/';
+        
+        this.page.identifier = '使用tsearch twalk等函数构建、遍历二叉树';
+    };
+    (function() { 
+        var d = document, s = d.createElement('script');  
+        s.src = '//' + 'zayxu' + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+
+
+
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>
