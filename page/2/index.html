@@ -166,7 +166,7 @@
 
             
             <section id="main">
-    <article id="post-如何让Libvirt crash之后产生core文件" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-Linux 文件访问、修改时间的区别" class="article article-type-post" itemscope itemprop="blogPost">
     <div class="article-inner">
         
         
@@ -174,7 +174,7 @@
                 
     
         <h1 itemprop="name">
-            <a class="article-title" href="/2016/11/16/如何让Libvirt crash之后产生core文件/">如何让Libvirt crash之后产生core文件</a>
+            <a class="article-title" href="/2016/11/16/Linux 文件访问、修改时间的区别/">Linux 文件访问、修改时间的区别</a>
         </h1>
     
 
@@ -183,7 +183,7 @@
                         
     <div class="article-date">
         <i class="fa fa-calendar"></i>
-        <a href="/2016/11/16/如何让Libvirt crash之后产生core文件/">
+        <a href="/2016/11/16/Linux 文件访问、修改时间的区别/">
             <time datetime="2016-11-15T16:00:00.000Z" itemprop="datePublished">2016-11-16</time>
         </a>
     </div>
@@ -198,7 +198,7 @@
                         
     <div class="article-tag">
         <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/virtualization/">virtualization</a>
+        <a class="tag-link" href="/tags/operation/">operation</a>
     </div>
 
                     </div>
@@ -209,12 +209,35 @@
         <div class="article-entry" itemprop="articleBody">
         
             
-            <blockquote>
-<p>基于CentOS/RHEL 6/7 系统</p>
-</blockquote>
-<p>修改 /etc/sysconfig/libvirtd 文件末尾，加入如下行：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">export DAEMON_COREFILE_LIMIT=&apos;unlimited&apos;</span><br></pre></td></tr></table></figure></p>
-<p>执行：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ulimit -c unlimited</span><br></pre></td></tr></table></figure></p>
-<p>重启libvirtd:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/etc/init.d/libvirtd restart</span><br></pre></td></tr></table></figure></p>
+            <p>使用stat 查看文件信息时，会发现文件有三个时间：</p>
+<ul>
+<li>Access Time</li>
+<li>Modify Time</li>
+<li>Change Time</li>
+</ul>
+<p>这三个时间各自的含义如下：  </p>
+<table>
+<thead>
+<tr>
+<th>时间</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Access time</td>
+<td>文件最近一次读取的时间</td>
+</tr>
+<tr>
+<td>Modify Time</td>
+<td>文件最近一次内容修改的时间</td>
+</tr>
+<tr>
+<td>Change Time</td>
+<td>文件最近一次原数据（如权限）修改的时间</td>
+</tr>
+</tbody>
+</table>
 
         
         </div>
@@ -225,7 +248,7 @@
 
 </div>
 
-    <a data-url="http://zay.pub/2016/11/16/如何让Libvirt crash之后产生core文件/" data-id="cjejptx48000ke4us5lsq88l6" class="article-share-link"><i class="fa fa-share"></i>Share</a>
+    <a data-url="http://zay.pub/2016/11/16/Linux 文件访问、修改时间的区别/" data-id="cjejpxhho0002r4uszlhez364" class="article-share-link"><i class="fa fa-share"></i>Share</a>
 <script>
     (function ($) {
         // Prevent duplicate binding
@@ -293,7 +316,7 @@
 
             
     
-        <a href="http://zay.pub/2016/11/16/如何让Libvirt crash之后产生core文件/#comments" class="article-comment-link disqus-comment-count" data-disqus-url="http://zay.pub/2016/11/16/如何让Libvirt crash之后产生core文件/">Comments</a>
+        <a href="http://zay.pub/2016/11/16/Linux 文件访问、修改时间的区别/#comments" class="article-comment-link disqus-comment-count" data-disqus-url="http://zay.pub/2016/11/16/Linux 文件访问、修改时间的区别/">Comments</a>
     
 
         </footer>
