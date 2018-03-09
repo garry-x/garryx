@@ -3,20 +3,19 @@
 <head>
     <meta charset="utf-8">
     
-    <title>使用tsearch twalk等函数构建、遍历二叉树 | Zay&#39;s Blog</title>
+    <title>Zay&#39;s Blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <meta name="description" content="参考：http://man7.org/linux/man-pages/man3/tsearch.3.html 使用tsearch等接口构建二叉树，其接口比较简洁，相关的函数声明如下：12345678#include &amp;lt;search.h&amp;gt;void *tsearch(const void *key, void **rootp, int (*compar)(const void *, con">
-<meta name="keywords" content="algorithm">
-<meta property="og:type" content="article">
-<meta property="og:title" content="使用tsearch twalk等函数构建、遍历二叉树">
-<meta property="og:url" content="http://zay.pub/2016/11/24/使用tsearch twalk等函数构建、遍历二叉树/index.html">
+    <meta name="description" content="fghsljoR8E">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Zay&#39;s Blog">
+<meta property="og:url" content="http://zay.pub/baidu_verify_fghsljoR8E.html">
 <meta property="og:site_name" content="Zay&#39;s Blog">
-<meta property="og:description" content="参考：http://man7.org/linux/man-pages/man3/tsearch.3.html 使用tsearch等接口构建二叉树，其接口比较简洁，相关的函数声明如下：12345678#include &amp;lt;search.h&amp;gt;void *tsearch(const void *key, void **rootp, int (*compar)(const void *, con">
+<meta property="og:description" content="fghsljoR8E">
 <meta property="og:locale" content="en">
-<meta property="og:updated_time" content="2018-02-28T09:57:37.309Z">
+<meta property="og:updated_time" content="2018-03-09T09:04:33.203Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="使用tsearch twalk等函数构建、遍历二叉树">
-<meta name="twitter:description" content="参考：http://man7.org/linux/man-pages/man3/tsearch.3.html 使用tsearch等接口构建二叉树，其接口比较简洁，相关的函数声明如下：12345678#include &amp;lt;search.h&amp;gt;void *tsearch(const void *key, void **rootp, int (*compar)(const void *, con">
+<meta name="twitter:title" content="Zay&#39;s Blog">
+<meta name="twitter:description" content="fghsljoR8E">
     
 
     
@@ -170,69 +169,15 @@
 </aside>
 
             
-            <section id="main"><article id="post-使用tsearch twalk等函数构建、遍历二叉树" class="article article-type-post" itemscope itemprop="blogPost">
+            <section id="main"><article id="page-" class="article article-type-page" itemscope itemprop="blogPost">
     <div class="article-inner">
         
-        
-            <header class="article-header">
-                
-    
-        <h1 class="article-title" itemprop="name">
-            使用tsearch twalk等函数构建、遍历二叉树
-        </h1>
-    
-
-                
-                    <div class="article-meta">
-                        
-    <div class="article-date">
-        <i class="fa fa-calendar"></i>
-        <a href="/2016/11/24/使用tsearch twalk等函数构建、遍历二叉树/">
-            <time datetime="2016-11-23T16:00:00.000Z" itemprop="datePublished">2016-11-24</time>
-        </a>
-    </div>
-
-
-                        
-    <div class="article-category">
-    	<i class="fa fa-folder"></i>
-        <a class="article-category-link" href="/categories/Linux/">Linux</a>
-    </div>
-
-                        
-    <div class="article-tag">
-        <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/algorithm/">algorithm</a>
-    </div>
-
-                    </div>
-                
-            </header>
         
         
         <div class="article-entry" itemprop="articleBody">
         
             
-            <p>参考：<a href="http://man7.org/linux/man-pages/man3/tsearch.3.html" target="_blank" rel="noopener">http://man7.org/linux/man-pages/man3/tsearch.3.html</a></p>
-<p>使用tsearch等接口构建二叉树，其接口比较简洁，相关的函数声明如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;search.h&gt;</span><br><span class="line">void *tsearch(const void *key, void **rootp, int (*compar)(const void *, const void *));</span><br><span class="line">void *tfind(const void *key, void *const *rootp, int (*compar)(const void *, const void *));</span><br><span class="line">void *tdelete(const void *key, void **rootp, int (*compar)(const void *, const void *));</span><br><span class="line">void twalk(const void *root, void (*action)(const void *nodep, const VISIT which, const int depth));</span><br><span class="line">#define _GNU_SOURCE         /* See feature_test_macros(7) */</span><br><span class="line">#include &lt;search.h&gt;</span><br><span class="line">void tdestroy(void *root, void (*free_node)(void *nodep));</span><br></pre></td></tr></table></figure></p>
-<ul>
-<li><p>tsearch: 查询键值key是否存在，如果不存在则将key插入二叉树<br>key: 指向键值key的指针<br>rootp：指向根节点指针的指针，若当前插入key为根节点，需要设置rootp指向的根节点指针为NULL<br>compar：比较函数, 若返回负值，表示第一个参数小于第二个参数；若返回正值，表示第一个参数大于第二个参数；若返回零，表示两个参数相等<br>返回值：指向键值key指针的指针</p>
-</li>
-<li><p>tfind：查询指定键值key是否存在<br>参数：与tsearch相同<br>返回值：若键值存在则返回键值key指针的指针，若不存在返回NULL</p>
-</li>
-<li><p>tdelete：从二叉树中删除给定键值<br>参数：与tsearch相同<br>返回值：若键值存在则返回父节点键值key指针的指针，若不存在返回NULL</p>
-</li>
-<li><p>twalk：遍历二叉树<br>root：根节点指针<br>action： 遍历函数，其参数解析如下</p>
-</li>
-<li><p>action： 二叉树遍历函数<br>nodep：键值key指针的指针<br>which：表示本次访问节点的类型，共有四种 preorder 前序，postorder 中序，endorder 后序，leaf 叶子节点。每个叶子节点只访问一次，中间节点会访问三次<br>depth：该节点在二叉树中的深度，根节点为0 ，以此类推</p>
-</li>
-</ul>
-<p>在action函数中对节点类型进行过滤，就可以得到前序遍历、中序遍历、后序遍历甚至混合使用的结果</p>
-<ul>
-<li>tdestroy：释放二叉树占用的空间<br>root： 根节点指针<br>free_node：二叉树中每个键值key的释放函数</li>
-</ul>
-<p>一个简单的代码示例：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;stdio.h&gt;</span><br><span class="line">#include &lt;stddef.h&gt;</span><br><span class="line">#include &lt;assert.h&gt;</span><br><span class="line">#define _GNU_SOURCE</span><br><span class="line">#include &lt;search.h&gt;</span><br><span class="line">typedef struct MyItem &#123;</span><br><span class="line">    int key;        /* key as the first member field */</span><br><span class="line">    int value;</span><br><span class="line">&#125; MyItem;</span><br><span class="line">int my_compare(const void *keyA, const void *keyB)</span><br><span class="line">&#123;</span><br><span class="line">    return *(int *)keyA - *(int *)keyB;</span><br><span class="line">&#125;</span><br><span class="line">void my_action(const void *nodep, VISIT value, int level)</span><br><span class="line">&#123;</span><br><span class="line">    const MyItem *item = *(const MyItem **)nodep;</span><br><span class="line">    switch (value) &#123;</span><br><span class="line">        case preorder:</span><br><span class="line">        case leaf:</span><br><span class="line">            printf(&quot;1. traversal, key=%d, value=%d, level=%d\n&quot;,</span><br><span class="line">                   item-&gt;key, item-&gt;value, level);</span><br><span class="line">            break;</span><br><span class="line">        case endorder:</span><br><span class="line">        case postorder:</span><br><span class="line">            break;</span><br><span class="line">    &#125;   </span><br><span class="line">&#125;</span><br><span class="line">void my_free(void *nodep)</span><br><span class="line">&#123;</span><br><span class="line">&#125;</span><br><span class="line">int main(int argc, char **artv)</span><br><span class="line">&#123;</span><br><span class="line">    void *root = NULL;</span><br><span class="line">    MyItem items[16];</span><br><span class="line">    int i;</span><br><span class="line">    MyItem **item = NULL;</span><br><span class="line">    for (i = 0; i &lt; 16; i++) &#123;</span><br><span class="line">        items[i].key = i;</span><br><span class="line">        items[i].value = i + 100;</span><br><span class="line">        tsearch(&amp;items[i].key, &amp;root, my_compare);</span><br><span class="line">    &#125;</span><br><span class="line">    /* 1. tree traversal (preorder) */</span><br><span class="line">    twalk(root, my_action);</span><br><span class="line">    /* 2. find item in the tree */</span><br><span class="line">    i = 5;</span><br><span class="line">    item = (MyItem **)tfind(&amp;i, &amp;root, my_compare);</span><br><span class="line">    assert(item != NULL);</span><br><span class="line">    printf(&quot;2. find key=%d, value=%d\n&quot;, (*item)-&gt;key, (*item)-&gt;value);</span><br><span class="line">    /* 3. remove a item */</span><br><span class="line">    i = 5;</span><br><span class="line">    tdelete(&amp;i, &amp;root, my_compare);</span><br><span class="line">    item = (MyItem **)tfind(&amp;i, &amp;root, my_compare);</span><br><span class="line">    assert(item == NULL);</span><br><span class="line">    printf(&quot;3. remove item with key=%d\n&quot;, i);</span><br><span class="line">    /* 4. destroy tree */</span><br><span class="line">    tdestroy(root, my_free);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-
+            fghsljoR8E
         
         </div>
         <footer class="article-footer">
@@ -242,7 +187,7 @@
 
 </div>
 
-    <a data-url="http://zay.pub/2016/11/24/使用tsearch twalk等函数构建、遍历二叉树/" data-id="cjejptx48000fe4uspipm293b" class="article-share-link"><i class="fa fa-share"></i>Share</a>
+    <a data-url="http://zay.pub/baidu_verify_fghsljoR8E.html" data-id="cjejptx220000e4usesykc59f" class="article-share-link"><i class="fa fa-share"></i>Share</a>
 <script>
     (function ($) {
         // Prevent duplicate binding
@@ -310,32 +255,13 @@
 
             
     
-        <a href="http://zay.pub/2016/11/24/使用tsearch twalk等函数构建、遍历二叉树/#comments" class="article-comment-link disqus-comment-count" data-disqus-url="http://zay.pub/2016/11/24/使用tsearch twalk等函数构建、遍历二叉树/">Comments</a>
+        <a href="http://zay.pub/baidu_verify_fghsljoR8E.html#comments" class="article-comment-link disqus-comment-count" data-disqus-url="http://zay.pub/baidu_verify_fghsljoR8E.html">Comments</a>
     
 
         </footer>
     </div>
     
         
-<nav id="article-nav">
-    
-        <a href="/2016/11/25/如何查看KVM虚拟机VM_EXIT统计信息/" id="article-nav-newer" class="article-nav-link-wrap">
-            <strong class="article-nav-caption">Newer</strong>
-            <div class="article-nav-title">
-                
-                    如何查看KVM虚拟机VM_EXIT统计信息
-                
-            </div>
-        </a>
-    
-    
-        <a href="/2016/11/16/Linux 文件访问、修改时间的区别/" id="article-nav-older" class="article-nav-link-wrap">
-            <strong class="article-nav-caption">Older</strong>
-            <div class="article-nav-title">Linux 文件访问、修改时间的区别</div>
-        </a>
-    
-</nav>
-
 
     
 </article>
@@ -527,9 +453,9 @@
     <script>
     var disqus_config = function () {
         
-            this.page.url = 'http://zay.pub/2016/11/24/使用tsearch twalk等函数构建、遍历二叉树/';
+            this.page.url = 'http://zay.pub/baidu_verify_fghsljoR8E.html';
         
-        this.page.identifier = '使用tsearch twalk等函数构建、遍历二叉树';
+        this.page.identifier = '';
     };
     (function() { 
         var d = document, s = d.createElement('script');  
