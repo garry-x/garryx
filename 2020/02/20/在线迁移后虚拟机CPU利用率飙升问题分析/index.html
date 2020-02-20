@@ -1,0 +1,207 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>在线迁移后虚拟机CPU利用率飙升问题分析 | Garry&#39;s Blog | 记录生活</title>
+
+  
+  <meta name="author" content="Garry Xu">
+  
+
+  
+  <meta name="description" content="提供虚拟机服务的过程中，遇到了如下问题：
+
+现象1：在线迁移前，虚拟机运行正常，迁移之后，虚拟机内用户态程序CPU占用飙升，甚至打满整个虚拟机
+现象2：虚拟机内CPU占用集中在用户态，关闭程序后虚拟机CPU使用率下降，启动程序可复现问题
+现象3：冷启动虚拟后，启动程序，问题消失
+
+该问题多次出现，升">
+  
+
+  
+  
+  <meta name="keywords" content="KVM">
+  
+
+  <meta id="viewport" name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+  <meta property="og:title" content="在线迁移后虚拟机CPU利用率飙升问题分析"/>
+
+  <meta property="og:site_name" content="Garry&#39;s Blog"/>
+
+  
+  <meta property="og:image" content="/favicon.ico"/>
+  
+
+  <link href="/favicon.ico" rel="icon">
+  <link rel="alternate" href="/atom.xml" title="Garry&#39;s Blog" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+
+<body>
+<div class="blog">
+  <div class="content">
+
+    <header>
+  <div class="site-branding">
+    <h1 class="site-title">
+      <a href="/">Garry&#39;s Blog</a>
+    </h1>
+    <p class="site-description">记录生活</p>
+  </div>
+  <nav class="site-navigation">
+    <ul>
+      
+        <li><a href="/">主页</a></li>
+      
+        <li><a href="/archives">归档</a></li>
+      
+        <li><a href="/categories">分类</a></li>
+      
+        <li><a href="/about">关于</a></li>
+      
+    </ul>
+  </nav>
+</header>
+
+    <main class="site-main posts-loop">
+    <article>
+
+  
+    
+    <h3 class="article-title"><span>在线迁移后虚拟机CPU利用率飙升问题分析</span></h3>
+    
+  
+
+  <div class="article-top-meta">
+    <span class="posted-on">
+      <a href="/2020/02/20/在线迁移后虚拟机CPU利用率飙升问题分析/" rel="bookmark">
+        <time class="entry-date published" datetime="2020-02-19T16:00:00.000Z">
+          2020-02-20
+        </time>
+      </a>
+    </span>
+  </div>
+
+
+  
+
+  <div class="article-content">
+    <div class="entry">
+      
+        <p>提供虚拟机服务的过程中，遇到了如下问题：</p>
+<ul>
+<li>现象1：在线迁移前，虚拟机运行正常，迁移之后，虚拟机内用户态程序CPU占用飙升，甚至打满整个虚拟机</li>
+<li>现象2：虚拟机内CPU占用集中在用户态，关闭程序后虚拟机CPU使用率下降，启动程序可复现问题</li>
+<li>现象3：冷启动虚拟后，启动程序，问题消失</li>
+</ul>
+<p>该问题多次出现，升级宿主机到高版本内核问题消失，最终通过缩小范围，发现打入如下内核Patch后问题不再出现.</p>
+<pre><code>d1fe9219551e914f26219afaca1063b280f25963 KVM: x86: reintroduce kvm_is_mmio_pfn</code></pre><p>该Patch修复了在设置EPT 页表项时，将”Zero Page”当做MMIO Page处理导致页面无法缓存的问题：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Zero PFN</th>
+<th>EPT PTE</th>
+<th>缓存类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>修复前</td>
+<td>0x1c2a</td>
+<td>0x1c2a105</td>
+<td>UC</td>
+<td>uncacheable</td>
+</tr>
+<tr>
+<td>修复后</td>
+<td>0x1c2a</td>
+<td>0x1c2a075</td>
+<td>WB</td>
+<td>writeback</td>
+</tr>
+</tbody></table>
+<ul>
+<li>注意不同内核”Zero Page”的PFN可能不同，上表中仅为示例</li>
+</ul>
+<p>可以看到未修复前，”Zero Page”不能被缓存，为何这会导致迁移场景的问题，下面进行详细的分析。</p>
+<h4 id="什么是”Zero-Page”"><a href="#什么是”Zero-Page”" class="headerlink" title="什么是”Zero Page”"></a>什么是”Zero Page”</h4><p>“Zero Page”是内容全部为0的特殊只读页面。在x86体系结构下，”Zero Page”存储在内核BSS段中并在内核启动时清零。”Zero PFN”是”Zero Page”对应的物理页帧号。</p>
+<pre><code>    __PAGE_ALIGNED_BSS 
+NEXT_PAGE(empty_zero_page)
+    .skip PAGE_SIZE
+EXPORT_SYMBOL(empty_zero_page)</code></pre><h4 id="什么场景下会使用”Zero-Page”"><a href="#什么场景下会使用”Zero-Page”" class="headerlink" title="什么场景下会使用”Zero Page”"></a>什么场景下会使用”Zero Page”</h4><p>最典型的场景：当读取未分配的匿名页时，会映射”Zero Page”到访问地址，如下图所示：</p>
+<p><img src="/images/alloc_zero.png" alt=""></p>
+<p>如果写入映射”Zero Page”的虚拟地址，会触发COW，分配新的页面。</p>
+<h4 id="虚拟机在线迁移和Zero-Page有什么关联？"><a href="#虚拟机在线迁移和Zero-Page有什么关联？" class="headerlink" title="虚拟机在线迁移和Zero Page有什么关联？"></a>虚拟机在线迁移和Zero Page有什么关联？</h4><p>虚拟机在线迁移过程中，会持续传输内存修改数据至目的端虚拟机，其中有如下判断。</p>
+<p><img src="/images/mig_zero.png" alt=""></p>
+<p>在线迁移过程中，不传输内容为0的内存页。这可能造成”Zero Page”变多，如下所示:</p>
+<ul>
+<li>在线迁移前，虚拟机存在内容为0的内存页。</li>
+</ul>
+<p><img src="/images/zero_before_mig.png" alt=""></p>
+<ul>
+<li>在线迁移后，由于未传输内容为0的内存页，对这些页面的读访问将映射到Zero Page</li>
+</ul>
+<p><img src="/images/zero_after_mig.png" alt=""></p>
+<ul>
+<li>如果Zero Page无法缓存，对其的读访问会有较大开销，实际测试结果(仅供参考)。  </li>
+</ul>
+<p><img src="/images/read_test.png" alt=""></p>
+<p>（分配6GB内存空间并清零，顺序读取每个内存页的头部1个字节，统计完成时间）</p>
+<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>该问题出现的根本原因是在线迁移之后，对”Zero Page”的缓存类型设置有误，导致用户态程序访存能力下降，从而导致问题。</p>
+<p>需要注意的是，如果开启了透明大页，该问题的出现概率将大幅降低，具体原因和THP的Zero Page有关，这里不做分析了。</p>
+
+      
+    </div>
+
+  </div>
+
+  <div class="article-footer">
+    <div class="article-meta pull-left">
+
+    
+
+    
+    
+
+    <span class="post-tags">
+      <i class="icon-tags"></i>
+        <a href="/tags/KVM/">KVM</a>
+    </span>
+    
+
+    </div>
+
+    
+  </div>
+</article>
+
+  
+
+
+
+
+
+
+    </main>
+
+    <footer class="site-footer">
+  <p class="site-info">
+    Proudly powered by <a href="https://hexo.io/" target="_blank">Hexo</a> and
+    Theme by <a href="https://github.com/CodeDaraW/Hacker" target="_blank">Hacker</a>
+    </br>
+    
+    &copy; 2020 Garry Xu
+    
+  </p>
+</footer>
+    
+  </div>
+</div>
+</body>
+</html>

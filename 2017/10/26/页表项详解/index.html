@@ -1,0 +1,202 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>页表项详解 | Garry&#39;s Blog | 记录生活</title>
+
+  
+  <meta name="author" content="Garry Xu">
+  
+
+  
+  <meta name="description" content="以下介绍基于IA-32e (x86_64)，参考 “Intel® 64 and IA-32 Architectures Software Developer’s Manual”
+页表是实现地址翻译的重要结构，其中，Page Table Entry (PTE)存储了页帧的物理地址和控制标记，了解PTE">
+  
+
+  
+  
+  <meta name="keywords" content="">
+  
+
+  <meta id="viewport" name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+  <meta property="og:title" content="页表项详解"/>
+
+  <meta property="og:site_name" content="Garry&#39;s Blog"/>
+
+  
+  <meta property="og:image" content="/favicon.ico"/>
+  
+
+  <link href="/favicon.ico" rel="icon">
+  <link rel="alternate" href="/atom.xml" title="Garry&#39;s Blog" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+
+<body>
+<div class="blog">
+  <div class="content">
+
+    <header>
+  <div class="site-branding">
+    <h1 class="site-title">
+      <a href="/">Garry&#39;s Blog</a>
+    </h1>
+    <p class="site-description">记录生活</p>
+  </div>
+  <nav class="site-navigation">
+    <ul>
+      
+        <li><a href="/">主页</a></li>
+      
+        <li><a href="/archives">归档</a></li>
+      
+        <li><a href="/categories">分类</a></li>
+      
+        <li><a href="/about">关于</a></li>
+      
+    </ul>
+  </nav>
+</header>
+
+    <main class="site-main posts-loop">
+    <article>
+
+  
+    
+    <h3 class="article-title"><span>页表项详解</span></h3>
+    
+  
+
+  <div class="article-top-meta">
+    <span class="posted-on">
+      <a href="/2017/10/26/页表项详解/" rel="bookmark">
+        <time class="entry-date published" datetime="2017-10-25T16:00:00.000Z">
+          2017-10-26
+        </time>
+      </a>
+    </span>
+  </div>
+
+
+  
+
+  <div class="article-content">
+    <div class="entry">
+      
+        <blockquote>
+</blockquote>
+<p>以下介绍基于IA-32e (x86_64)，参考 “Intel® 64 and IA-32 Architectures Software Developer’s Manual”</p>
+<p>页表是实现地址翻译的重要结构，其中，Page Table Entry (PTE)存储了页帧的物理地址和控制标记，了解PTE的详细结构对理解访存过程中的权限控制、缺页处理等机制都有着重要的意义。</p>
+<h3 id="PTE的内部结构如下图所示："><a href="#PTE的内部结构如下图所示：" class="headerlink" title="PTE的内部结构如下图所示："></a>PTE的内部结构如下图所示：</h3><p><img src="/images/ptev2.png" alt=""></p>
+<h3 id="关键控制位的详细解释"><a href="#关键控制位的详细解释" class="headerlink" title="关键控制位的详细解释"></a>关键控制位的详细解释</h3><table>
+<thead>
+<tr>
+<th align="left">比特位</th>
+<th align="left">简称</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">0</td>
+<td align="left">P</td>
+<td align="left">表示页帧是否存在；如果P值为0，访问该页帧将触发 Page Fault</td>
+</tr>
+<tr>
+<td align="left">1</td>
+<td align="left">R/W</td>
+<td align="left">表示页帧的读写权限；如果值为0，表示页帧不能被修改（R/W生效，依赖CR0 Write Protect比特置位</td>
+</tr>
+<tr>
+<td align="left">2</td>
+<td align="left">U/S</td>
+<td align="left">表示页帧对用户态和内核态访问的限制；如果值为0， 不允许用户态访问</td>
+</tr>
+<tr>
+<td align="left">3</td>
+<td align="left">PWT</td>
+<td align="left">PAT，PCD和PWT位组成Page Attribute Table的索引，表示页帧的缓存模式</td>
+</tr>
+<tr>
+<td align="left">4</td>
+<td align="left">PCD</td>
+<td align="left">见PWT说明</td>
+</tr>
+<tr>
+<td align="left">5</td>
+<td align="left">A</td>
+<td align="left">表示PTE是否被访问过；若处理器在地址翻译的过程中使用了该PTE，则置位该PTE的A位</td>
+</tr>
+<tr>
+<td align="left">6</td>
+<td align="left">D</td>
+<td align="left">表示页帧被修改过；若处理器发现对线性地址的写操作，置位对应PTE的D位</td>
+</tr>
+<tr>
+<td align="left">7</td>
+<td align="left">PAT</td>
+<td align="left">见PWT说明</td>
+</tr>
+<tr>
+<td align="left">8</td>
+<td align="left">G</td>
+<td align="left">表示页帧为全局页，TLB中该页帧对应的地址转换，不会在进程切换时清空</td>
+</tr>
+</tbody></table>
+<ul>
+<li>A位和D位只能由软件清除</li>
+</ul>
+
+      
+    </div>
+
+  </div>
+
+  <div class="article-footer">
+    <div class="article-meta pull-left">
+
+    
+      
+
+    <span class="post-categories">
+      <i class="icon-categories"></i>
+        <a href="/categories/x86/">x86</a>
+    </span>
+    
+
+    
+
+    </div>
+
+    
+  </div>
+</article>
+
+  
+
+
+
+
+
+
+    </main>
+
+    <footer class="site-footer">
+  <p class="site-info">
+    Proudly powered by <a href="https://hexo.io/" target="_blank">Hexo</a> and
+    Theme by <a href="https://github.com/CodeDaraW/Hacker" target="_blank">Hacker</a>
+    </br>
+    
+    &copy; 2020 Garry Xu
+    
+  </p>
+</footer>
+    
+  </div>
+</div>
+</body>
+</html>
