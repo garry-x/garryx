@@ -1,0 +1,504 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>Garry&#39;s Blog | 记录生活</title>
+
+  
+  <meta name="author" content="Garry Xu">
+  
+
+  
+
+  
+
+  <meta id="viewport" name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+  
+
+  <meta property="og:site_name" content="Garry&#39;s Blog"/>
+
+  
+  <meta property="og:image" content="/favicon.ico"/>
+  
+
+  <link href="/favicon.ico" rel="icon">
+  <link rel="alternate" href="/atom.xml" title="Garry&#39;s Blog" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+
+<body>
+<div class="blog">
+  <div class="content">
+
+    <header>
+  <div class="site-branding">
+    <h1 class="site-title">
+      <a href="/">Garry&#39;s Blog</a>
+    </h1>
+    <p class="site-description">记录生活</p>
+  </div>
+  <nav class="site-navigation">
+    <ul>
+      
+        <li><a href="/">主页</a></li>
+      
+        <li><a href="/archives">归档</a></li>
+      
+        <li><a href="/categories">分类</a></li>
+      
+        <li><a href="/about">关于</a></li>
+      
+    </ul>
+  </nav>
+</header>
+
+    <main class="site-main posts-loop">
+    
+  <article>
+
+  
+    
+    <h3 class="article-title"><a href="/2020/02/20/在线迁移后虚拟机CPU利用率飙升问题分析/"><span>在线迁移后虚拟机CPU利用率飙升问题分析</span></a></h3>
+    
+  
+
+  <div class="article-top-meta">
+    <span class="posted-on">
+      <a href="/2020/02/20/在线迁移后虚拟机CPU利用率飙升问题分析/" rel="bookmark">
+        <time class="entry-date published" datetime="2020-02-19T16:00:00.000Z">
+          2020-02-20
+        </time>
+      </a>
+    </span>
+  </div>
+
+
+  
+
+  <div class="article-content">
+    <div class="entry">
+      
+        <p>提供虚拟机服务的过程中，遇到了如下问题：</p>
+<ul>
+<li>现象1：在线迁移前，虚拟机运行正常，迁移之后，虚拟机内用户态程序CPU占用飙升，甚至打满整个虚拟机</li>
+<li>现象2：虚拟机内CPU占用集中在用户态，关闭程序后虚拟机CPU使用率下降，启动程序可复现问题</li>
+<li>现象3：冷启动虚拟后，启动程序，问题消失</li>
+</ul>
+<p>该问题多次出现，升级宿主机到高版本内核问题消失，最终通过缩小范围，发现打入如下内核Patch后问题不再出现.</p>
+<pre><code>d1fe9219551e914f26219afaca1063b280f25963 KVM: x86: reintroduce kvm_is_mmio_pfn</code></pre><p>该Patch修复了在设置EPT 页表项时，将”Zero Page”当做MMIO Page处理导致页面无法缓存的问题：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Zero PFN</th>
+<th>EPT PTE</th>
+<th>缓存类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>修复前</td>
+<td>0x1c2a</td>
+<td>0x1c2a105</td>
+<td>UC</td>
+<td>uncacheable</td>
+</tr>
+<tr>
+<td>修复后</td>
+<td>0x1c2a</td>
+<td>0x1c2a075</td>
+<td>WB</td>
+<td>writeback</td>
+</tr>
+</tbody></table>
+<ul>
+<li>注意不同内核”Zero Page”的PFN可能不同，上表中仅为示例</li>
+</ul>
+<p>可以看到未修复前，”Zero Page”不能被缓存，为何这会导致迁移场景的问题，下面进行详细的分析。</p>
+<h4 id="什么是”Zero-Page”"><a href="#什么是”Zero-Page”" class="headerlink" title="什么是”Zero Page”"></a>什么是”Zero Page”</h4><p>“Zero Page”是内容全部为0的特殊只读页面。在x86体系结构下，”Zero Page”存储在内核BSS段中并在内核启动时清零。”Zero PFN”是”Zero Page”对应的物理页帧号。</p>
+<pre><code>    __PAGE_ALIGNED_BSS 
+NEXT_PAGE(empty_zero_page)
+    .skip PAGE_SIZE
+EXPORT_SYMBOL(empty_zero_page)</code></pre><h4 id="什么场景下会使用”Zero-Page”"><a href="#什么场景下会使用”Zero-Page”" class="headerlink" title="什么场景下会使用”Zero Page”"></a>什么场景下会使用”Zero Page”</h4><p>最典型的场景：当读取未分配的匿名页时，会映射”Zero Page”到访问地址，如下图所示：</p>
+<p><img src="/images/alloc_zero.png" alt=""></p>
+<p>如果写入映射”Zero Page”的虚拟地址，会触发COW，分配新的页面。</p>
+<h4 id="虚拟机在线迁移和Zero-Page有什么关联？"><a href="#虚拟机在线迁移和Zero-Page有什么关联？" class="headerlink" title="虚拟机在线迁移和Zero Page有什么关联？"></a>虚拟机在线迁移和Zero Page有什么关联？</h4><p>虚拟机在线迁移过程中，会持续传输内存修改数据至目的端虚拟机，其中有如下判断。</p>
+<p><img src="/images/mig_zero.png" alt=""></p>
+<p>在线迁移过程中，不传输内容为0的内存页。这可能造成”Zero Page”变多，如下所示:</p>
+<ul>
+<li>在线迁移前，虚拟机存在内容为0的内存页。</li>
+</ul>
+<p><img src="/images/zero_before_mig.png" alt=""></p>
+<ul>
+<li>在线迁移后，由于未传输内容为0的内存页，对这些页面的读访问将映射到Zero Page</li>
+</ul>
+<p><img src="/images/zero_after_mig.png" alt=""></p>
+<ul>
+<li>如果Zero Page无法缓存，对其的读访问会有较大开销，实际测试结果(仅供参考)。  </li>
+</ul>
+<p><img src="/images/read_test.png" alt=""></p>
+<p>（分配6GB内存空间并清零，顺序遍历读取整个6GB空间并统计完成时间）</p>
+<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>该问题出现的根本原因是在线迁移之后，对”Zero Page”的缓存类型设置有误，导致用户态程序访存能力下降，从而导致问题。</p>
+<p>需要注意的是，如果开启了透明大页，该问题的出现概率将大幅降低，具体原因和THP的Zero Page有关，这里不做分析了。</p>
+
+      
+    </div>
+
+  </div>
+
+  <div class="article-footer">
+    <div class="article-meta pull-left">
+
+    
+
+    
+    
+
+    <span class="post-tags">
+      <i class="icon-tags"></i>
+        <a href="/tags/KVM/">KVM</a>
+    </span>
+    
+
+    </div>
+
+    
+  </div>
+</article>
+
+
+
+  <article>
+
+  
+    
+    <h3 class="article-title"><a href="/2017/10/26/页表项详解/"><span>页表项详解</span></a></h3>
+    
+  
+
+  <div class="article-top-meta">
+    <span class="posted-on">
+      <a href="/2017/10/26/页表项详解/" rel="bookmark">
+        <time class="entry-date published" datetime="2017-10-25T16:00:00.000Z">
+          2017-10-26
+        </time>
+      </a>
+    </span>
+  </div>
+
+
+  
+
+  <div class="article-content">
+    <div class="entry">
+      
+        <blockquote>
+</blockquote>
+<p>以下介绍基于IA-32e (x86_64)，参考 “Intel® 64 and IA-32 Architectures Software Developer’s Manual”</p>
+<p>页表是实现地址翻译的重要结构，其中，Page Table Entry (PTE)存储了页帧的物理地址和控制标记，了解PTE的详细结构对理解访存过程中的权限控制、缺页处理等机制都有着重要的意义。</p>
+<h3 id="PTE的内部结构如下图所示："><a href="#PTE的内部结构如下图所示：" class="headerlink" title="PTE的内部结构如下图所示："></a>PTE的内部结构如下图所示：</h3><p><img src="/images/ptev2.png" alt=""></p>
+<h3 id="关键控制位的详细解释"><a href="#关键控制位的详细解释" class="headerlink" title="关键控制位的详细解释"></a>关键控制位的详细解释</h3><table>
+<thead>
+<tr>
+<th align="left">比特位</th>
+<th align="left">简称</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">0</td>
+<td align="left">P</td>
+<td align="left">表示页帧是否存在；如果P值为0，访问该页帧将触发 Page Fault</td>
+</tr>
+<tr>
+<td align="left">1</td>
+<td align="left">R/W</td>
+<td align="left">表示页帧的读写权限；如果值为0，表示页帧不能被修改（R/W生效，依赖CR0 Write Protect比特置位</td>
+</tr>
+<tr>
+<td align="left">2</td>
+<td align="left">U/S</td>
+<td align="left">表示页帧对用户态和内核态访问的限制；如果值为0， 不允许用户态访问</td>
+</tr>
+<tr>
+<td align="left">3</td>
+<td align="left">PWT</td>
+<td align="left">PAT，PCD和PWT位组成Page Attribute Table的索引，表示页帧的缓存模式</td>
+</tr>
+<tr>
+<td align="left">4</td>
+<td align="left">PCD</td>
+<td align="left">见PWT说明</td>
+</tr>
+<tr>
+<td align="left">5</td>
+<td align="left">A</td>
+<td align="left">表示PTE是否被访问过；若处理器在地址翻译的过程中使用了该PTE，则置位该PTE的A位</td>
+</tr>
+<tr>
+<td align="left">6</td>
+<td align="left">D</td>
+<td align="left">表示页帧被修改过；若处理器发现对线性地址的写操作，置位对应PTE的D位</td>
+</tr>
+<tr>
+<td align="left">7</td>
+<td align="left">PAT</td>
+<td align="left">见PWT说明</td>
+</tr>
+<tr>
+<td align="left">8</td>
+<td align="left">G</td>
+<td align="left">表示页帧为全局页，TLB中该页帧对应的地址转换，不会在进程切换时清空</td>
+</tr>
+</tbody></table>
+<ul>
+<li>A位和D位只能由软件清除</li>
+</ul>
+
+      
+    </div>
+
+  </div>
+
+  <div class="article-footer">
+    <div class="article-meta pull-left">
+
+    
+      
+
+    <span class="post-categories">
+      <i class="icon-categories"></i>
+        <a href="/categories/x86/">x86</a>
+    </span>
+    
+
+    
+
+    </div>
+
+    
+  </div>
+</article>
+
+
+
+  <article>
+
+  
+    
+    <h3 class="article-title"><a href="/2017/09/12/x86平台分页模式/"><span>x86分页模式</span></a></h3>
+    
+  
+
+  <div class="article-top-meta">
+    <span class="posted-on">
+      <a href="/2017/09/12/x86平台分页模式/" rel="bookmark">
+        <time class="entry-date published" datetime="2017-09-11T16:00:00.000Z">
+          2017-09-12
+        </time>
+      </a>
+    </span>
+  </div>
+
+
+  
+
+  <div class="article-content">
+    <div class="entry">
+      
+        <p>x86体系结构下对于4K Page支持三种分页模式：4级64-bit，3级64bit 和 2级32bit。使用大页会产生更多的paging mode，这里不做介绍。</p>
+<p><strong>1) 4级64-bit：IA-32e （long mode) 模式下使用该paging mode</strong></p>
+<ul>
+<li>每级页表项均为64bit，CR3存储PML4 Table基地址</li>
+</ul>
+<p><img src="/images/paging_64_4.png" alt=""></p>
+<p><strong>2) 3级64-bit：IA-32模式下，开启PAE 关闭PSE，使用该paging mode</strong></p>
+<ul>
+<li>每级页表项均为64bit，CR3存储PDPT Table基地址</li>
+<li>每个逻辑处理器维护四个PDPTE寄存器，寄存器的值由CR3指向的地址读取</li>
+</ul>
+<p><img src="/images/paging_64_3.png" alt=""></p>
+<p><strong>3) 2级32bit：IA-32模式下，关闭PAE，关闭PSE，使用该paging mode</strong></p>
+<ul>
+<li>每级页表项均为32bit，CR3存储PD Table基地址</li>
+</ul>
+<p><img src="/images/paging_32_2.png" alt=""></p>
+
+      
+    </div>
+
+  </div>
+
+  <div class="article-footer">
+    <div class="article-meta pull-left">
+
+    
+      
+
+    <span class="post-categories">
+      <i class="icon-categories"></i>
+        <a href="/categories/x86/">x86</a>
+    </span>
+    
+
+    
+
+    </div>
+
+    
+  </div>
+</article>
+
+
+
+  <article>
+
+  
+    
+    <h3 class="article-title"><a href="/2017/03/17/MSI中断/"><span>MSI中断</span></a></h3>
+    
+  
+
+  <div class="article-top-meta">
+    <span class="posted-on">
+      <a href="/2017/03/17/MSI中断/" rel="bookmark">
+        <time class="entry-date published" datetime="2017-03-16T16:00:00.000Z">
+          2017-03-17
+        </time>
+      </a>
+    </span>
+  </div>
+
+
+  
+
+  <div class="article-content">
+    <div class="entry">
+      
+        <h3 id="用I-O-APIC控制中断有如下的几个问题"><a href="#用I-O-APIC控制中断有如下的几个问题" class="headerlink" title="用I/O APIC控制中断有如下的几个问题:"></a>用I/O APIC控制中断有如下的几个问题:</h3><ul>
+<li>设备需要连接到I/O APIC的IRQ line才能触发中断</li>
+<li>多个设备共享IRQ line导致中断触发时OS需要调用多个中断处理程序</li>
+<li>在内存写操作完成前，CPU收到设备发送的对应中断（写操作可能在队列中）</li>
+</ul>
+<h3 id="Message-Signaled-Interrupts（MSI）"><a href="#Message-Signaled-Interrupts（MSI）" class="headerlink" title="Message Signaled Interrupts（MSI）"></a>Message Signaled Interrupts（MSI）</h3><p>MSI最早在PCI 版本2.2.提出，MSI解决了APIC的问题，设备想要发送MSI 中断，只需要向CPU发送对中断消息，CPU内的LAPIC捕获到该消息即交给CPU处理。</p>
+<p>测试数据显示，使用MSI，中断处理延时相对于APIC有3倍提升，相对于传统的XT-PIC (8259)有7倍提升</p>
+<p><img src="/images/msi.png" alt=""></p>
+<p>参考：<br>Reducing Interrupt Latency Through the Use of Message Signaled Interrupts， by Intel Corporation</p>
+
+      
+    </div>
+
+  </div>
+
+  <div class="article-footer">
+    <div class="article-meta pull-left">
+
+    
+      
+
+    <span class="post-categories">
+      <i class="icon-categories"></i>
+        <a href="/categories/x86/">x86</a>
+    </span>
+    
+
+    
+
+    </div>
+
+    
+  </div>
+</article>
+
+
+
+  <article>
+
+  
+    
+    <h3 class="article-title"><a href="/2017/03/16/高级可编程中断控制器/"><span>高级可编程中断控制器</span></a></h3>
+    
+  
+
+  <div class="article-top-meta">
+    <span class="posted-on">
+      <a href="/2017/03/16/高级可编程中断控制器/" rel="bookmark">
+        <time class="entry-date published" datetime="2017-03-15T16:00:00.000Z">
+          2017-03-16
+        </time>
+      </a>
+    </span>
+  </div>
+
+
+  
+
+  <div class="article-content">
+    <div class="entry">
+      
+        <p>高级可编程中断控制器（Advanced Programmable Interrupt Controller）</p>
+<p><img src="/images/APIC.png" alt=""></p>
+<p>APIC由两部分构成，Local APIC 在CPU内部，I/O APIC在主板芯片组内，I/O APIC和LAPIC通过总线连接。</p>
+<h3 id="I-O-APIC"><a href="#I-O-APIC" class="headerlink" title="I/O APIC"></a>I/O APIC</h3><p>触发中断的外部设备需要连接到I/O APIC 设备的某个IRQ line上，I/O APIC内的Interrupt Redirection Table记录了IRQ Line与中断Vector的对应关系、中断的优先级、目标CPU、以及CPU的选取策略。</p>
+<p>I/O APIC 支持两种选取策略：</p>
+<ul>
+<li>静态策略：按照IRT中配置的目标CPU/CPU集合分发中断</li>
+<li>动态策略：使用Round-Robin方式，分发中断至各个CPU上</li>
+</ul>
+<h3 id="Local-APIC"><a href="#Local-APIC" class="headerlink" title="Local APIC"></a>Local APIC</h3><p>通过I/O APIC 路由过来的中断会传送至LAPIC，LAPIC通知CPU进行处理。LAPIC也会处理CPU触发的处理器间中断（Inter-processor Interrupts）。</p>
+<p>参考：<br>Understanding the Linux Kernel，3rd Editon，by Marco Cesati, Daniel P. Bovet</p>
+
+      
+    </div>
+
+  </div>
+
+  <div class="article-footer">
+    <div class="article-meta pull-left">
+
+    
+      
+
+    <span class="post-categories">
+      <i class="icon-categories"></i>
+        <a href="/categories/x86/">x86</a>
+    </span>
+    
+
+    
+
+    </div>
+
+    
+  </div>
+</article>
+
+
+
+
+<nav class="pagination">
+  
+  
+</nav>
+    </main>
+
+    <footer class="site-footer">
+  <p class="site-info">
+    Proudly powered by <a href="https://hexo.io/" target="_blank">Hexo</a> and
+    Theme by <a href="https://github.com/CodeDaraW/Hacker" target="_blank">Hacker</a>
+    </br>
+    
+    &copy; 2020 Garry Xu
+    
+  </p>
+</footer>
+    
+  </div>
+</div>
+</body>
+</html>

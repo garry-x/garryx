@@ -1,0 +1,159 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>x86分页模式 | Garry&#39;s Blog | 记录生活</title>
+
+  
+  <meta name="author" content="Garry Xu">
+  
+
+  
+  <meta name="description" content="x86体系结构下对于4K Page支持三种分页模式：4级64-bit，3级64bit 和 2级32bit。使用大页会产生更多的paging mode，这里不做介绍。
+1) 4级64-bit：IA-32e （long mode) 模式下使用该paging mode
+
+每级页表项均为64bit，CR3存">
+  
+
+  
+  
+  <meta name="keywords" content="">
+  
+
+  <meta id="viewport" name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+  <meta property="og:title" content="x86分页模式"/>
+
+  <meta property="og:site_name" content="Garry&#39;s Blog"/>
+
+  
+  <meta property="og:image" content="/favicon.ico"/>
+  
+
+  <link href="/favicon.ico" rel="icon">
+  <link rel="alternate" href="/atom.xml" title="Garry&#39;s Blog" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+
+<body>
+<div class="blog">
+  <div class="content">
+
+    <header>
+  <div class="site-branding">
+    <h1 class="site-title">
+      <a href="/">Garry&#39;s Blog</a>
+    </h1>
+    <p class="site-description">记录生活</p>
+  </div>
+  <nav class="site-navigation">
+    <ul>
+      
+        <li><a href="/">主页</a></li>
+      
+        <li><a href="/archives">归档</a></li>
+      
+        <li><a href="/categories">分类</a></li>
+      
+        <li><a href="/about">关于</a></li>
+      
+    </ul>
+  </nav>
+</header>
+
+    <main class="site-main posts-loop">
+    <article>
+
+  
+    
+    <h3 class="article-title"><span>x86分页模式</span></h3>
+    
+  
+
+  <div class="article-top-meta">
+    <span class="posted-on">
+      <a href="/2017/09/12/x86平台分页模式/" rel="bookmark">
+        <time class="entry-date published" datetime="2017-09-11T16:00:00.000Z">
+          2017-09-12
+        </time>
+      </a>
+    </span>
+  </div>
+
+
+  
+
+  <div class="article-content">
+    <div class="entry">
+      
+        <p>x86体系结构下对于4K Page支持三种分页模式：4级64-bit，3级64bit 和 2级32bit。使用大页会产生更多的paging mode，这里不做介绍。</p>
+<p><strong>1) 4级64-bit：IA-32e （long mode) 模式下使用该paging mode</strong></p>
+<ul>
+<li>每级页表项均为64bit，CR3存储PML4 Table基地址</li>
+</ul>
+<p><img src="/images/paging_64_4.png" alt=""></p>
+<p><strong>2) 3级64-bit：IA-32模式下，开启PAE 关闭PSE，使用该paging mode</strong></p>
+<ul>
+<li>每级页表项均为64bit，CR3存储PDPT Table基地址</li>
+<li>每个逻辑处理器维护四个PDPTE寄存器，寄存器的值由CR3指向的地址读取</li>
+</ul>
+<p><img src="/images/paging_64_3.png" alt=""></p>
+<p><strong>3) 2级32bit：IA-32模式下，关闭PAE，关闭PSE，使用该paging mode</strong></p>
+<ul>
+<li>每级页表项均为32bit，CR3存储PD Table基地址</li>
+</ul>
+<p><img src="/images/paging_32_2.png" alt=""></p>
+
+      
+    </div>
+
+  </div>
+
+  <div class="article-footer">
+    <div class="article-meta pull-left">
+
+    
+      
+
+    <span class="post-categories">
+      <i class="icon-categories"></i>
+        <a href="/categories/x86/">x86</a>
+    </span>
+    
+
+    
+
+    </div>
+
+    
+  </div>
+</article>
+
+  
+
+
+
+
+
+
+    </main>
+
+    <footer class="site-footer">
+  <p class="site-info">
+    Proudly powered by <a href="https://hexo.io/" target="_blank">Hexo</a> and
+    Theme by <a href="https://github.com/CodeDaraW/Hacker" target="_blank">Hacker</a>
+    </br>
+    
+    &copy; 2020 Garry Xu
+    
+  </p>
+</footer>
+    
+  </div>
+</div>
+</body>
+</html>
